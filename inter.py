@@ -2,8 +2,10 @@
 import numpy as np
 import random as rd
 import os
+import copy as cp
 
 '''
+vasp POSCAR manipulate
 #example usage:
 
 #alloy_layers('POSCAR_out','log',4.1625)
@@ -24,9 +26,6 @@ import os
 #shift_z_align('POSCAR_out',7,9)  # align two atoms in xy plane(share same x,y coordinates)
 #z_reverse('ZnO.vasp')
 '''
-
-
-
 
 def calc_dist(lst,n1,n2,H):
     if  lst[n2][0]-lst[n1][0]>=(0.5*H[0][0]):
@@ -140,7 +139,7 @@ def get_low_high(cell,data):
     low= data.min(axis=0)[2]
     return low,high
 
-def get_data(filename):   #return cell,data,str1,str2
+def get_data(filename,f1=True):   #return cell,data,str1,str2  f1=='TRUE'?retrun cart;return direct
     with open(filename,'r') as fin:
         lines=fin.readlines()
     cell=np.zeros((3,3))
@@ -159,7 +158,14 @@ def get_data(filename):   #return cell,data,str1,str2
         for i in range(tot_num):
             for j in range(3):
                 data1[i][j]=float(lines[8+i].split()[j])
-        data = np.dot(data1,cell)
+        if f1=='True':
+
+            #data1=np.dot(cell,np.transpose(data1))
+            #data=np.transpose(data1)
+            data = np.dot(data1,cell)
+        else:
+            data = data1
+
     elif lines[7][0]== 'S'  :
         if lines[8][0]== 'C' :
             for i in range(tot_num):
@@ -170,7 +176,12 @@ def get_data(filename):   #return cell,data,str1,str2
             for i in range(tot_num):
                 for j in range(3):
                     data1[i][j]=float(lines[9+i].split()[j])
-            data = np.dot(data1,cell)
+            if f1=='True':
+                #data1=np.dot(cell,np.transpose(data1))
+                #data=np.transpose(data1)
+                data = np.dot(data1,cell)
+            else:
+                data = data1
     return cell,data,lines[5],lines[6]
 
 def add_vac(filename):
@@ -611,11 +622,41 @@ def z_reverse(filename):
     get_POSCAR(cell,str1,str2,data,'False','reverse.vasp')
     return
 
+def z_rotate(filename,rg,tht,box):
+    cell=get_data(filename,'True')[0]
+    data=get_data(filename,'True')[1]
+    str1=get_data(filename,'True')[2]
+    str2=get_data(filename,'True')[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+    radi_tht=tht*np.pi/180.0
+    R_matrix=[[np.cos(radi_tht),-np.sin(radi_tht),0],
+              [np.sin(radi_tht),np.cos(radi_tht),0],
+              [               0,               0,1]]
+    print R_matrix
+    print data
+    #data1=cp.copy(data)
+    #data1=np.dot(R_matrix,np.transpose(data1))
+    #data1=np.transpose(data1)
+    for i in range(tot_num):
+        if data[i][2]<=rg[1] and data[i][2]>=rg[0] :
+            data[i]=np.dot(R_matrix,np.transpose(data[i]))
+            data[i]=np.transpose(data[i])
+    if box == 'True':
+        cell1=np.dot(R_matrix,np.transpose(cell))
+        cell1=np.transpose(cell1)
+        get_POSCAR(cell1,str1,str2,data,'False','rotated.vasp')
+    else:
+        get_POSCAR(cell,str1,str2,data,'False','rotated.vasp')
+    return
+
+
 #z_reverse('ZnO.vasp')
 #get_inter_vac('reverse.vasp','Ag.vasp',2.3)
 #zcenter('POSCAR_out','mass')
 #fix_atom('POSCAR_out',[[10,12],[16,17]],'POSCAR_out')
-
+#rotate('a.vasp',(0,0,1),45,(1,1,0),'True')
+#z_rotate('slab.vasp',[16,30],30,'False')
 
 #shift_z_align('POSCAR_out',4,8)
 #tear_interface('last.vasp',2)
