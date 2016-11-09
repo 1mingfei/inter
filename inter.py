@@ -667,7 +667,7 @@ def get_H_int(filename,lst,r,out):
     return
 #get_H_int('full.vasp',[61,85,49,73,60,84],3,'out')
 
-def add_dist_type(in1,lst_in,filename='POSCAR_sd'):
+def add_dist_btw(in1,lst_in,dis,filename='POSCAR_sd'):
     cell=get_data(in1)[0]
     data=get_data(in1)[1]
     str1=get_data(in1)[2]
@@ -687,7 +687,7 @@ def add_dist_type(in1,lst_in,filename='POSCAR_sd'):
         for i  in range(tot_num):
             for j in range(len(lst_in)):
                 if data[i][2]<=lst_in[j][1] and data[i][2]>=  lst_in[j][0]:
-                    fout.write('    '+str(data[i][0])+'    '+str(data[i][1])+'    '+str(data[i][2]+0.4))
+                    fout.write('    '+str(data[i][0])+'    '+str(data[i][1])+'    '+str(data[i][2]+dis))
                 else:
                     fout.write('    '+str(data[i][0])+'    '+str(data[i][1])+'    '+str(data[i][2]))
                 fout.write('\n')
@@ -697,7 +697,7 @@ def add_dist_type(in1,lst_in,filename='POSCAR_sd'):
 
 
 
-add_dist_type('POSCAR',[[63.8,75]],'POSCAR_out')
+add_dist_btw('POSCAR',[[63.8,75]],0.4,'POSCAR_out')
 #z_reverse('ZnO.vasp')
 #get_inter_vac('reverse.vasp','Ag.vasp',2.3)
 #zcenter('POSCAR_out','mass')
