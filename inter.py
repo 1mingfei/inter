@@ -650,7 +650,54 @@ def z_rotate(filename,rg,tht,box):
         get_POSCAR(cell,str1,str2,data,'False','rotated.vasp')
     return
 
+def get_H_int(filename,lst,r,out):
+    cell=get_data(filename,'True')[0]
+    data=get_data(filename,'True')[1]
+    str1=get_data(filename,'True')[2]
+    str2=get_data(filename,'True')[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+    f=open(out,'w')
+    for i in range(len(lst)):
+        for j in range(i+1,len(lst)):
+            tmp_d=calc_dist(data,lst[i],lst[j],cell)
+            if tmp_d< r:
+                f.write('%12.6f  %12.6f  %12.6f\n'%((data[lst[i]][0]+data[lst[j]][0])/2.0,(data[lst[i]][1]+data[lst[j]][1])/2.0,data[lst[i]][2]-1.2))
+    f.close()
+    return
+#get_H_int('full.vasp',[61,85,49,73,60,84],3,'out')
 
+def add_dist_type(in1,lst_in,filename='POSCAR_sd'):
+    cell=get_data(in1)[0]
+    data=get_data(in1)[1]
+    str1=get_data(in1)[2]
+    str2=get_data(in1)[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+
+    with open(filename,'w') as fout:
+        fout.write('generated POSCAR\n')
+        fout.write('1.0\n')
+        for i in range(3):
+            fout.write(str(str(cell[i][0])+' '+str(cell[i][1])+' '+str(cell[i][2])+'\n'))
+        fout.write(str1)
+        fout.write(str2)
+        fout.write('Selective\nCart\n')
+
+        for i  in range(tot_num):
+            for j in range(len(lst_in)):
+                if data[i][2]<=lst_in[j][1] and data[i][2]>=  lst_in[j][0]:
+                    fout.write('    '+str(data[i][0])+'    '+str(data[i][1])+'    '+str(data[i][2]+0.4))
+                else:
+                    fout.write('    '+str(data[i][0])+'    '+str(data[i][1])+'    '+str(data[i][2]))
+                fout.write('\n')
+
+    return
+
+
+
+
+add_dist_type('POSCAR',[[63.8,75]],'POSCAR_out')
 #z_reverse('ZnO.vasp')
 #get_inter_vac('reverse.vasp','Ag.vasp',2.3)
 #zcenter('POSCAR_out','mass')
