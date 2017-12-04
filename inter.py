@@ -3,6 +3,7 @@ import numpy as np
 import random as rd
 import os
 import copy as cp
+import math
 
 '''
 vasp POSCAR manipulate
@@ -213,8 +214,9 @@ def remove_vac(filename):
     cell[2][2]=tmp1
     get_POSCAR(cell,str1,str2,data,'False','POSCAR_out')
     return
- 
+
 def get_inter_vac(filename1,filename2,dist):
+    #only applies to c perpendicular to a-b plane now
     cell_1=get_data(filename1)[0]
     data_1=get_data(filename1)[1]
     str1_1=get_data(filename1)[2]
@@ -223,6 +225,9 @@ def get_inter_vac(filename1,filename2,dist):
     data_2=get_data(filename2)[1]
     str1_2=get_data(filename2)[2]
     str2_2=get_data(filename2)[3]
+    data_2_tmp=np.dot(data_2,np.linalg.inv(cell_2))
+    cell_tmp=[cell_1[0],cell_1[1],cell_2[2]]
+    data_2_tmp =np.dot(data_2_tmp,cell_tmp)
     str1=combine_str(str1_1,str1_2)
     str2=combine_str(str2_1,str2_2)
     high1=get_low_high(cell_1,data_1)[1]
@@ -232,9 +237,9 @@ def get_inter_vac(filename1,filename2,dist):
     lst_2=[int(s) for s in str2_2.split()]
     tot_num_2=int(sum(lst_2))
     for i in range(tot_num_2):
-        data_2[i][2]+=high1
-        data_2[i][2]+=dist
-    data=np.concatenate((data_1,data_2),axis=0)
+        data_2_tmp[i][2]+=high1
+        data_2_tmp[i][2]+=dist
+    data=np.concatenate((data_1,data_2_tmp),axis=0)
     cell_1[2][2]+=12.0
     cell_1[2][2]+=cell_2[2][2]
     get_POSCAR(cell_1,str1,str2,data,'False','POSCAR_out')
@@ -517,6 +522,19 @@ def alloy_layers(filename,log,LC):
         alloy(filename,outname,4.1625,outname2)
     return
 
+def wrap_back(data,cell):
+    for i in range(len(data)):
+        a=math.floor(data[i][0]/cell[0][0])
+        if a <> 0 :
+            data[i][0] -= a*cell[0][0]
+        b=math.floor(data[i][1]/cell[1][1])
+        if b <> 0 :
+            data[i][1] -= b*cell[1][1]
+        c=math.floor(data[i][2]/cell[2][2])
+        if c <> 0 :
+            data[i][2] -= c*cell[2][2]
+    return
+
 def zcenter(filename,mass):
     cell=get_data(filename)[0]
     data=get_data(filename)[1]
@@ -524,7 +542,7 @@ def zcenter(filename,mass):
     str2=get_data(filename)[3]
     lst_a=[int(s) for s in str2.split()]
     tot_num=int(sum(lst_a))
-
+    wrap_back(data,cell)
 
     with open(mass,'r') as fin2:
         mylines1=fin2.readlines()
@@ -533,24 +551,74 @@ def zcenter(filename,mass):
     for i in range(len(lst_a)):
         mass.append(float(mylines1[i].split()[0]))
         tot_m += mass[i]*lst_a[i]
-    print tot_m
     tmp1 = 0
-
     c=0
     for i in range(len(lst_a)):
         for j in range(lst_a[i]):
             tmp1+=data[c][2]*mass[i]
             c+=1
-    print c, tmp1
+    #print c, tmp1
     tmp2=tmp1/float(tot_m)
-    print tmp2
+    #print tmp2
     dist=cell[2][2]/2.0-tmp2
-    print dist
+    #print dist
     data[:,2]+=dist
+
+    get_POSCAR(cell,str1,str2,data,'False','POSCAR_out')
+    return
+
+def xyzcenter(filename,mass):
+    cell=get_data(filename,'True')[0]
+    data=get_data(filename,'True')[1]
+    str1=get_data(filename,'True')[2]
+    str2=get_data(filename,'True')[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+    print data
+    wrap_back(data,cell)
+    print data
+
+    with open(mass,'r') as fin2:
+        mylines1=fin2.readlines()
+    mass = []
+    tot_m=0
+    for i in range(len(lst_a)):
+        mass.append(float(mylines1[i].split()[0]))
+        tot_m += mass[i]*lst_a[i]
+    tmp1 = 0
+    c=0
+    for i in range(len(lst_a)):
+        for j in range(lst_a[i]):
+            tmp1+=data[c][2]*mass[i]
+            c+=1
+    tmp2=tmp1/float(tot_m)
+    dist=cell[2][2]/2.0-tmp2
+    data[:,2]+=dist
+
+    tmp1 = 0
+    c=0
+    for i in range(len(lst_a)):
+        for j in range(lst_a[i]):
+            tmp1+=data[c][1]*mass[i]
+            c+=1
+    tmp2=tmp1/float(tot_m)
+    dist=cell[1][1]/2.0-tmp2
+    data[:,1]+=dist
+
+    tmp1 = 0
+    c=0
+    for i in range(len(lst_a)):
+        for j in range(lst_a[i]):
+            tmp1+=data[c][0]*mass[i]
+            c+=1
+    tmp2=tmp1/float(tot_m)
+    dist=cell[0][0]/2.0-tmp2
+    data[:,0]+=dist
 
 
     get_POSCAR(cell,str1,str2,data,'False','POSCAR_out')
     return
+
 
 
 def shift_z_align(filename,at1,at2):
@@ -693,14 +761,48 @@ def add_dist_btw(in1,lst_in,dis,filename='POSCAR_sd'):
                 fout.write('\n')
 
     return
+def mirror(in1,out1='mirrored.vasp'):
+    cell=get_data(in1)[0]
+    data=get_data(in1)[1]
+    str1=get_data(in1)[2]
+    str2=get_data(in1)[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+    data_new=np.zeros((2*tot_num,3))
+    count1=0
+    count2=0
+    for i in range(len(lst_a)):
+        for j in range(lst_a[i]):
+            data_new[count2]=data[count1+j]
+            count2+=1
+            tmp=float(cell[2][2]*2.0-data[count1+j][2])
+            data_new[count2]=data[count1+j]
+            data_new[count2][2]=tmp
+            count2+=1
+        count1+=int(lst_a[i])
+    cell_new=cp.copy(cell)
+    cell_new[2][2]+=cell[2][2]
+    for i in range(len(lst_a)):
+        lst_a[i]*=2
+    print lst_a
+    str2_new='   '.join(str(x) for x in lst_a)+'\n'
+    get_POSCAR(cell_new,str1,str2_new,data_new,'False',out1)
+    return
 
 
 
+#mirror('1.vasp','1.vasp')
+#fix_atom('1.vasp',[[0,10],[32,42]],'1.vasp')
+#fix_atom('2.vasp',[[0,10],[32,42]],'2.vasp')
+#fix_atom('3.vasp',[[0,10],[32,42]],'3.vasp')
+#fix_atom('4.vasp',[[0,10],[32,42]],'4.vasp')
+#fix_atom('5.vasp',[[0,10],[32,42]],'5.vasp')
+#fix_atom('6.vasp',[[0,10],[32,42]],'6.vasp')
 
-add_dist_btw('POSCAR',[[63.8,75]],0.4,'POSCAR_out')
+#add_dist_btw('POSCAR',[[63.8,75]],0.4,'POSCAR_out')
 #z_reverse('ZnO.vasp')
 #get_inter_vac('reverse.vasp','Ag.vasp',2.3)
-#zcenter('POSCAR_out','mass')
+#xyzcenter('POSCAR_out','mass')
 #fix_atom('POSCAR_out',[[10,12],[16,17]],'POSCAR_out')
 #rotate('a.vasp',(0,0,1),45,(1,1,0),'True')
 #z_rotate('slab.vasp',[16,30],30,'False')
