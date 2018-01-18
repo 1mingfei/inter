@@ -26,6 +26,12 @@ vasp POSCAR manipulate
 #zcenter('POSCAR_out','mass')  # move mass center of slab to 0.5 in z direction,mass file needed
 #shift_z_align('POSCAR_out',7,9)  # align two atoms in xy plane(share same x,y coordinates)
 #z_reverse('ZnO.vasp')
+#mirror('1.vasp','1.vasp')
+#rotate('a.vasp',(0,0,1),45,(1,1,0),'True')
+#z_rotate('slab.vasp',[16,30],30,'False')
+#tear_interface('last.vasp',2)
+#xyzcenter('POSCAR_out','mass')
+
 '''
 
 def calc_dist(lst,n1,n2,H):
@@ -789,23 +795,44 @@ def mirror(in1,out1='mirrored.vasp'):
     get_POSCAR(cell_new,str1,str2_new,data_new,'False',out1)
     return
 
+def surf_sampling(in1,atm,n):
+    cell=get_data(in1)[0]
+    data=get_data(in1)[1]
+    str1=get_data(in1)[2]
+    str2=get_data(in1)[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+    dist=np.sqrt(cell[0][0]**2+cell[0][1]**2+cell[0][2]**2)
+    disp=dist/float(n)
+    for i in range(n):
+        for j in range(n):
+            data[atm][0]=disp*j
+            data[atm][1]=disp*i
+            out1=str(i*n+j+1)+'.vasp'
+            get_POSCAR(cell,str1,str2,data,'False',out1)
+    return
+
+def step_surface(in1):
+    cell=get_data(in1)[0]
+    data=get_data(in1)[1]
+    str1=get_data(in1)[2]
+    str2=get_data(in1)[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+    data_new=[]
+    for i in range(tot_num):
+        if (data[i][2] > 13.5) and (data[i][2]<14.0) and (data[i][1]< 0.5*cell[1][1]):
+            lst_a[0]-=1
+            continue
+        else:
+            data_new.append([data[i][0],data[i][1],data[i][2]])
+    str2_new='   '.join(str(x) for x in lst_a)+'\n'
+    out1='step.vasp'
+    tot_num=int(sum(lst_a))
+    get_POSCAR(cell,str1,str2_new,data_new,'False',out1)
+    return
+step_surface('POSCAR')
+ 
 
 
-#mirror('1.vasp','1.vasp')
-#fix_atom('1.vasp',[[0,10],[32,42]],'1.vasp')
-#fix_atom('2.vasp',[[0,10],[32,42]],'2.vasp')
-#fix_atom('3.vasp',[[0,10],[32,42]],'3.vasp')
-#fix_atom('4.vasp',[[0,10],[32,42]],'4.vasp')
-#fix_atom('5.vasp',[[0,10],[32,42]],'5.vasp')
-#fix_atom('6.vasp',[[0,10],[32,42]],'6.vasp')
 
-#add_dist_btw('POSCAR',[[63.8,75]],0.4,'POSCAR_out')
-#z_reverse('ZnO.vasp')
-#get_inter_vac('reverse.vasp','Ag.vasp',2.3)
-#xyzcenter('POSCAR_out','mass')
-#fix_atom('POSCAR_out',[[10,12],[16,17]],'POSCAR_out')
-#rotate('a.vasp',(0,0,1),45,(1,1,0),'True')
-#z_rotate('slab.vasp',[16,30],30,'False')
-
-#shift_z_align('POSCAR_out',4,8)
-#tear_interface('last.vasp',2)
