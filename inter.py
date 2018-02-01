@@ -831,8 +831,51 @@ def step_surface(in1):
     tot_num=int(sum(lst_a))
     get_POSCAR(cell,str1,str2_new,data_new,'False',out1)
     return
-step_surface('POSCAR')
  
+def solid_solution_z(filename,conc):
+    cell=get_data(filename)[0]
+    data=get_data(filename)[1]
+    str1=get_data(filename)[2]
+    str2=get_data(filename)[3]
+    lst_a=[int(s) for s in str2.split()]
+    tot_num=int(sum(lst_a))
+    co = 0
+    for i in range(tot_num):
+        if ((data[i][2] <42.876) and (data[i][2]>40.88)) :
+            co+=1
+    print co
+    data1=np.zeros((tot_num,3))
+    data_new = np.zeros((tot_num,3))
+    data_tmp=data
+    #for i in range(tot_num):
+    #    data_tmp[i][0]=data[i][0]
+    #    data_tmp[i][1]=data[i][1]
+    #    data_tmp[i][2]=data[i][2]
+    data_tmp = sorted(data_tmp, key=lambda x:x[2], reverse=False)
+
+    dop=int(conc*co)
+    print dop
+    num2=tot_num-co
+    data1=cp.copy(data_tmp[num2:])
+
+    np.random.shuffle(data1)
+
+    for i in range(num2):
+        data_new[i][0]=data_tmp[i][0]
+        data_new[i][1]=data_tmp[i][1]
+        data_new[i][2]=data_tmp[i][2]
+    for i in range(num2,tot_num):
+        data_new[i][0]=data1[i-num2][0]
+        data_new[i][1]=data1[i-num2][1]
+        data_new[i][2]=data1[i-num2][2]
+
+    str1='  Ag Cu\n'
+    str2='  '+str(tot_num-dop)+'    '+str(dop)+'\n'
+    get_POSCAR(cell,str1,str2,data_new,'False','ss.vasp')
+    return
+
+solid_solution_z('POSCAR',0.1)
+
 
 
 
